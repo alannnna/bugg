@@ -18,18 +18,20 @@ int main(int argc, char* argv[]) {
     int ret;
     int status;
     if (pid == -1) {
-        std::cerr << "failed to fork: " << strerror(errno) << std::endl;
+        std::cout << "fork failed" << std::endl;
         return 1;
     } else if (pid == 0) {
         // Child process
         ret = ptrace(PT_TRACE_ME, 0, 0, 0);
         std::cout << "ptrace: " << ret << std::endl;
         ret = execve(argv[1], NULL, NULL);
-        std::cout << "execve: " << ret << std::endl;
+        // execve will not return if successful
+        std::cout << "execve returned, oh no: " << ret << std::endl;
     } else {
         // Parent process
+        sleep(1);
         ret = waitpid(pid, &status, 0);
-        std::cout << "waitpid: " << ret << std::endl;
+        std::cout << "waitpid: " << ret << " " << status << std::endl;
     }
 
     return 0;
