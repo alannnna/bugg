@@ -1,6 +1,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <sys/ptrace.h>
+#include <sys/wait.h>
 
 int main(int argc, char* argv[]) {
     if (argc == 1) {
@@ -15,24 +16,21 @@ int main(int argc, char* argv[]) {
 
     pid_t pid = fork();
     int ret;
-    if (pid == 0) {
-        ret = ptrace(PT_TRACE_ME, 0, 0, 0);
-        if (ret < 0) {
-            std::cerr << "failed to trace me: " << ret << std::endl;
-            return 1;
-        }
-        ret = execve(argv[1], argc > 2 ? argv + 2 : NULL, argc > 3 ? argv + 3 : NULL);
-        if (ret < 0) {
-            std::cerr << "failed to execve: " << ret << std::endl;
-            return 1;
-        }
-    }
-    ret = waitpid(pid, NULL, 0);
-    if (ret < 0) {
-        std::cerr << "failed to waitpid: " << ret << std::endl;
+    int status;
+    if (pid == -1) {
+        std::cerr << "failed to fork: " << strerror(errno) << std::endl;
         return 1;
+    } else if (pid == 0) {
+        // Child process
+        ret = ptrace(PT_TRACE_ME, 0, 0, 0);
+        std::cout << "ptrace: " << ret << std::endl;
+        ret = execve(argv[1], NULL, NULL);
+        std::cout << "execve: " << ret << std::endl;
+    } else {
+        // Parent process
+        ret = waitpid(pid, &status, 0);
+        std::cout << "waitpid: " << ret << std::endl;
     }
-    std::cout << "waitpid: " << ret << std::endl;
 
     return 0;
 }
