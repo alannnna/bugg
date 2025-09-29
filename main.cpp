@@ -22,15 +22,29 @@ int main(int argc, char* argv[]) {
         return 1;
     } else if (pid == 0) {
         // Child process
-        ret = ptrace(PT_TRACE_ME, 0, 0, 0);
-        std::cout << "ptrace: " << ret << std::endl;
+        // ret = ptrace(PT_TRACE_ME, 0, 0, 0);
+        // std::cout << "ptrace: " << ret << std::endl;
         ret = execve(argv[1], NULL, NULL);
         // execve will not return if successful
         std::cout << "execve returned, oh no: " << ret << std::endl;
     } else {
-        // Parent process
-        sleep(1);
-        ret = waitpid(pid, &status, 0);
+        do {
+            ret = waitpid(pid, &status, 0);
+            if (ret == -1) {
+                perror("waitpid");
+                exit(EXIT_FAILURE);
+            }
+
+           if (WIFEXITED(status)) {
+                printf("exited, status=%d\n", WEXITSTATUS(status));
+            } else if (WIFSIGNALED(status)) {
+                printf("killed by signal %d\n", WTERMSIG(status));
+            } else if (WIFSTOPPED(status)) {
+                printf("stopped by signal %d\n", WSTOPSIG(status));
+            } else if (WIFCONTINUED(status)) {
+                printf("continued\n");
+            }
+        } while (!WIFEXITED(status) && !WIFSIGNALED(status));
         std::cout << "waitpid: " << ret << " " << status << std::endl;
     }
 
